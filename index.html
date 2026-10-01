@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Learning The Four Seasons - Accessible Educational App</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Open+Sans:wght@600;700;800&display=swap');
+        
+        * {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Fredoka', 'Open Sans', system-ui, -apple-system, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
+        /* Large touch target focus styles */
+        .btn-touch {
+            min-height: 72px;
+            min-width: 72px;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+        }
+
+        .btn-touch:active {
+            transform: scale(0.96);
+        }
+
+        .card-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+        }
+
+        .card-shadow-lg {
+            box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.12), 0 10px 15px -5px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Pulse animation for active target highlight */
+        @keyframes gentle-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        .gentle-pulse {
+            animation: gentle-pulse 2.5s infinite ease-in-out;
+        }
+
+        /* Wobble animation for try again feedback */
+        @keyframes gentle-wobble {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        .gentle-wobble {
+            animation: gentle-wobble 0.4s ease-in-out;
+        }
+
+        /* Star Float Animation */
+        @keyframes float-up {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(-80px) scale(1.2); opacity: 0; }
+        }
+
+        .star-particle {
+            position: absolute;
+            animation: float-up 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            pointer-events: none;
+        }
+
+        /* Focus rings for keyboard and accessibility */
+        button:focus-visible, div[tabindex="0"]:focus-visible {
+            outline: 4px solid #3b82f6;
+            outline-offset: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 flex flex-col justify-between selection:bg-none">
+
+    <!-- TOP NAVIGATION & PROFILE BAR -->
+    <header class="bg-white border-b-4 border-slate-200 px-4 py-3 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-6xl mx-auto flex items-center justify-between gap-2">
+            
+            <!-- Left: Home / Back Button -->
+            <button id="btn-home" onclick="goToHome()" class="btn-touch flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-2 rounded-2xl border-2 border-slate-300 text-lg md:text-xl">
+                <span class="text-2xl">🏠</span>
+                <span class="hidden sm:inline">HOME</span>
+            </button>
+
+            <!-- Center: Active Profile Display -->
+            <div class="flex items-center gap-2 bg-amber-50 border-2 border-amber-300 px-4 py-2 rounded-2xl">
+                <button onclick="toggleStudentProfile()" class="flex items-center gap-2 focus:outline-none" title="Switch Student Profile">
+                    <span id="profile-avatar" class="text-3xl md:text-4xl">🦊</span>
+                    <div class="text-left">
+                        <div class="text-xs text-amber-700 font-bold uppercase tracking-wider">Student</div>
+                        <div id="profile-name" class="text-lg md:text-xl font-bold text-amber-900 leading-tight">Student 1</div>
+                    </div>
+                </button>
+                <div class="h-8 w-px bg-amber-300 mx-1"></div>
+                <!-- Stars Counter -->
+                <div class="flex items-center gap-1 bg-amber-200 px-3 py-1 rounded-xl">
+                    <span class="text-2xl">⭐</span>
+                    <span id="stars-count" class="text-xl font-bold text-amber-950">0</span>
+                </div>
+            </div>
+
+            <!-- Right: Sound Toggle & Teacher Access -->
+            <div class="flex items-center gap-2">
+                <button id="btn-audio-toggle" onclick="toggleAudio()" class="btn-touch bg-blue-50 hover:bg-blue-100 text-blue-700 p-3 rounded-2xl border-2 border-blue-200 text-2xl flex items-center justify-center" aria-label="Toggle Sound">
+                    🔊
+                </button>
+                <button onclick="openTeacherModal()" class="btn-touch bg-purple-50 hover:bg-purple-100 text-purple-700 p-3 rounded-2xl border-2 border-purple-200 text-2xl flex items-center justify-center" aria-label="Teacher Dashboard">
+                    ⚙️
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main id="app-viewport" class="flex-grow max-w-6xl w-full mx-auto p-4 md:p-6 flex flex-col justify-center items-center">
+        <!-- Dynamic content injected here via JS -->
+    </main>
+
+    <!-- CELEBRATION OVERLAY (Calm floating stars) -->
+    <div id="celebration-overlay" class="fixed inset-0 pointer-events-none z-50 flex items-center justify-center hidden">
+        <div id="star-container" class="relative w-64 h-64 flex items-center justify-center">
+            <!-- Dynamic stars injected here -->
+        </div>
+    </div>
+
+    <!-- TEACHER DASHBOARD MODAL -->
+    <div id="teacher-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl border-4 border-purple-300 max-w-2xl w-full p-6 md:p-8 card-shadow-lg max-h-[90vh] overflow-y-auto">
+            
+            <div class="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-6">
+                <div class="flex items-center gap-3">
+                    <span class="text-4xl">⚙️</span>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Teacher Dashboard</h2>
+                        <p class="text-slate-500 text-sm">Settings, progress & level selection</p>
+                    </div>
+                </div>
+                <button onclick="closeTeacherModal()" class="text-slate-400 hover:text-slate-600 text-3xl font-bold p-2">✕</button>
+            </div>
+
+            <!-- Student Profile Settings -->
+            <div class="space-y-6">
+                <div class="bg-purple-50 p-4 rounded-2xl border-2 border-purple-100">
+                    <h3 class="font-bold text-purple-900 text-lg mb-3">Student Profiles</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Student 1 Edit -->
+                        <div class="bg-white p-3 rounded-xl border border-purple-200 space-y-2">
+                            <label class="block text-xs font-bold text-slate-500 uppercase">Student 1 Name</label>
+                            <input type="text" id="teacher-s1-name" value="Student 1" onchange="updateStudentName('student1', this.value)" class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-lg font-bold text-slate-800">
+                            <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+                                <span>Avatar:</span>
+                                <div class="flex gap-1">
+                                    <button onclick="updateStudentAvatar('student1', '🦊')" class="p-1 hover:bg-slate-100 rounded">🦊</button>
+                                    <button onclick="updateStudentAvatar('student1', '🦁')" class="p-1 hover:bg-slate-100 rounded">🦁</button>
+                                    <button onclick="updateStudentAvatar('student1', '🐸')" class="p-1 hover:bg-slate-100 rounded">🐸</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Student 2 Edit -->
+                        <div class="bg-white p-3 rounded-xl border border-purple-200 space-y-2">
+                            <label class="block text-xs font-bold text-slate-500 uppercase">Student 2 Name</label>
+                            <input type="text" id="teacher-s2-name" value="Student 2" onchange="updateStudentName('student2', this.value)" class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-lg font-bold text-slate-800">
+                            <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+                                <span>Avatar:</span>
+                                <div class="flex gap-1">
+                                    <button onclick="updateStudentAvatar('student2', '🐼')" class="p-1 hover:bg-slate-100 rounded">🐼</button>
+                                    <button onclick="updateStudentAvatar('student2', '🐨')" class="p-1 hover:bg-slate-100 rounded">🐨</button>
+                                    <button onclick="updateStudentAvatar('student2', '🦄')" class="p-1 hover:bg-slate-100 rounded">🦄</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Difficulty & Sound Toggles -->
+                <div class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-4">
+                    <h3 class="font-bold text-slate-800 text-lg">App Options</h3>
+                    
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <div class="font-bold text-slate-700">Speech Audio</div>
+                            <div class="text-xs text-slate-500">Read words & feedback aloud</div>
+                        </div>
+                        <button id="teacher-toggle-speech" onclick="toggleSpeechSetting()" class="px-4 py-2 bg-emerald-500 text-white font-bold rounded-xl text-sm">ENABLED</button>
+                    </div>
+
+                    <hr class="border-slate-200">
+
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <div class="font-bold text-slate-700">Calm Star Celebrations</div>
+                            <div class="text-xs text-slate-500">Visual star particles on match</div>
+                        </div>
+                        <button id="teacher-toggle-celeb" onclick="toggleCelebrationSetting()" class="px-4 py-2 bg-emerald-500 text-white font-bold rounded-xl text-sm">ENABLED</button>
+                    </div>
+                </div>
+
+                <!-- Jump to Level directly -->
+                <div class="bg-amber-50 p-4 rounded-2xl border-2 border-amber-200">
+                    <h3 class="font-bold text-amber-900 text-lg mb-2">Direct Level Jump</h3>
+                    <p class="text-amber-700 text-xs mb-3">Choose any level for the active student:</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button onclick="jumpToLevel(1)" class="p-2 bg-white border-2 border-amber-300 rounded-xl font-bold text-amber-900 text-sm hover:bg-amber-100">L1: Same Picture</button>
+                        <button onclick="jumpToLevel(2)" class="p-2 bg-white border-2 border-amber-300 rounded-xl font-bold text-amber-900 text-sm hover:bg-amber-100">L2: 3 Pictures</button>
+                        <button onclick="jumpToLevel(3)" class="p-2 bg-white border-2 border-amber-300 rounded-xl font-bold text-amber-900 text-sm hover:bg-amber-100">L3: Season Match</button>
+                        <button onclick="jumpToLevel(4)" class="p-2 bg-white border-2 border-amber-300 rounded-xl font-bold text-amber-900 text-sm hover:bg-amber-100">L4: Picture→Word</button>
+                        <button onclick="jumpToLevel(5)" class="p-2 bg-white border-2 border-amber-300 rounded-xl font-bold text-amber-900 text-sm hover:bg-amber-100">L5: Word→Picture</button>
+                        <button onclick="jumpToLevel(6)" class="p-2 bg-white border-2 border-amber-300 rounded-xl font-bold text-amber-900 text-sm hover:bg-amber-100">L6: Word→Word</button>
+                        <button onclick="jumpToLevel(7)" class="p-2 bg-white border-2 border-amber-300 rounded-xl font-bold text-amber-900 text-sm hover:bg-amber-100">L7: Season Sorting</button>
+                    </div>
+                </div>
+
+                <!-- Reset Student Progress -->
+                <div class="pt-2 flex justify-between items-center">
+                    <button onclick="resetCurrentStudentProgress()" class="px-4 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-xl border border-rose-300 text-sm">
+                        Reset Student Progress
+                    </button>
+                    <button onclick="closeTeacherModal()" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl text-lg">
+                        Done
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Custom Vector SVG Generator for clear, bright, child-friendly illustrations
+         */
+        const SVG_MAP = {
+            // FALL ITEMS
+            'fall_leaves': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M50 15 C30 25, 15 45, 25 70 C35 80, 50 85, 50 85 C50 85, 65 80, 75 70 C85 45, 70 25, 50 15 Z" fill="#ea580c"/><path d="M50 15 L50 85 M50 35 L30 45 M50 50 L25 60 M50 35 L70 45 M50 50 L75 60" stroke="#c2410c" stroke-width="3" stroke-linecap="round"/><path d="M35 25 C20 35, 10 55, 20 75 C30 80, 40 80, 45 75" fill="#d97706" opacity="0.85"/></svg>`,
+            
+            'pumpkin': `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="58" rx="38" ry="28" fill="#ea580c"/><ellipse cx="38" cy="58" rx="26" ry="28" fill="#f97316"/><ellipse cx="62" cy="58" rx="26" ry="28" fill="#f97316"/><ellipse cx="50" cy="58" rx="16" ry="28" fill="#fb923c"/><path d="M47 30 Q50 15 58 18 Q55 28 51 30 Z" fill="#15803d"/><path d="M55 20 Q65 15 62 25" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round"/></svg>`,
+            
+            'apple': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M50 30 C35 15 15 25 20 55 C25 80 45 85 50 82 C55 85 75 80 80 55 C85 25 65 15 50 30 Z" fill="#dc2626"/><path d="M46 28 C45 15 50 10 50 10" stroke="#78350f" stroke-width="4" stroke-linecap="round"/><path d="M50 16 Q65 10 62 22 Z" fill="#16a34a"/><circle cx="38" cy="40" r="4" fill="#fca5a5" opacity="0.6"/></svg>`,
+            
+            'sweater': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M30 25 Q50 32 70 25 L88 42 L75 52 L72 82 L28 82 L25 52 L12 42 Z" fill="#d97706"/><rect x="28" y="76" width="44" height="6" fill="#b45309" rx="2"/><path d="M30 25 Q50 35 70 25 Q50 20 30 25 Z" fill="#fef3c7"/><line x1="28" y1="50" x2="72" y2="50" stroke="#fef3c7" stroke-width="4"/><line x1="28" y1="62" x2="72" y2="62" stroke="#b45309" stroke-width="4"/></svg>`,
+            
+            'rain_boots': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M22 25 L40 25 L38 65 L55 65 C62 65 65 72 65 80 L20 80 L22 25 Z" fill="#eab308"/><path d="M42 30 L60 30 L58 70 L75 70 C82 70 85 77 85 85 L40 85 L42 30 Z" fill="#ca8a04"/><rect x="20" y="78" width="45" height="5" fill="#475569" rx="2"/><rect x="40" y="83" width="45" height="5" fill="#334155" rx="2"/></svg>`,
+            
+            'fall_tree': `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="44" y="55" width="12" height="35" rx="4" fill="#78350f"/><path d="M50 15 C25 15 15 35 20 55 C30 65 70 65 80 55 C85 35 75 15 50 15 Z" fill="#ea580c"/><circle cx="35" cy="30" r="14" fill="#f97316"/><circle cx="62" cy="32" r="15" fill="#d97706"/><circle cx="50" cy="42" r="16" fill="#c2410c"/><circle cx="20" cy="72" r="3" fill="#ea580c"/><circle cx="78" cy="75" r="4" fill="#d97706"/></svg>`,
+            
+            'wind': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M15 35 Q45 25 65 35 T80 30" fill="none" stroke="#cbd5e1" stroke-width="5" stroke-linecap="round"/><path d="M10 50 Q50 40 70 52 T85 45" fill="none" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/><path d="M25 68 Q55 60 75 70" fill="none" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/><path d="M60 25 C65 15 55 10 50 20" fill="none" stroke="#cbd5e1" stroke-width="4"/><path d="M70 42 C72 32 60 30 58 40" fill="none" stroke="#94a3b8" stroke-width="4"/><path d="M35 55 Q28 65 38 72 Z" fill="#ea580c"/><path d="M75 22 Q70 30 78 35 Z" fill="#d97706"/></svg>`,
+            
+            'rain': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M25 40 C15 40 10 30 20 20 C30 10 50 12 55 20 C65 10 85 20 80 32 C90 38 85 50 75 50 L25 50 Z" fill="#94a3b8"/><path d="M30 60 L25 75 M45 60 L40 75 M60 60 L55 75 M75 60 L70 75 M35 78 L30 90 M55 78 L50 90" stroke="#0284c7" stroke-width="4" stroke-linecap="round"/></svg>`,
+
+            // WINTER ITEMS
+            'snowman': `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="70" r="22" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="2"/><circle cx="50" cy="42" r="16" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/><circle cx="50" cy="22" r="11" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/><circle cx="46" cy="20" r="2" fill="#0f172a"/><circle cx="54" cy="20" r="2" fill="#0f172a"/><polygon points="50,23 65,25 50,27" fill="#ea580c"/><circle cx="50" cy="38" r="2" fill="#0f172a"/><circle cx="50" cy="44" r="2" fill="#0f172a"/><circle cx="50" cy="50" r="2" fill="#0f172a"/><path d="M40 28 Q50 33 60 28 L62 35 Q50 38 38 35 Z" fill="#ef4444"/><rect x="38" y="10" width="24" height="3" fill="#0f172a"/><rect x="42" y="2" width="16" height="9" fill="#0f172a"/><path d="M34 42 L18 35 M66 42 L82 35" stroke="#78350f" stroke-width="3" stroke-linecap="round"/></svg>`,
+            
+            'snowflake': `<svg viewBox="0 0 100 100" class="w-full h-full"><g stroke="#0284c7" stroke-width="4" stroke-linecap="round"><line x1="50" y1="10" x2="50" y2="90"/><line x1="10" y1="50" x2="90" y2="50"/><line x1="22" y1="22" x2="78" y2="78"/><line x1="22" y1="78" x2="78" y2="22"/><path d="M50 25 L42 18 M50 25 L58 18 M50 75 L42 82 M50 75 L58 82"/><path d="M25 50 L18 42 M25 50 L18 58 M75 50 L82 42 M75 50 L82 58"/></g></svg>`,
+            
+            'mittens': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M20 75 L20 45 C20 30 35 30 40 45 L40 50 C45 48 50 52 48 58 L42 62 L42 75 Z" fill="#ef4444"/><rect x="18" y="73" width="26" height="8" rx="2" fill="#f87171"/><path d="M80 75 L80 45 C80 30 65 30 60 45 L60 50 C55 48 50 52 52 58 L58 62 L58 75 Z" fill="#dc2626"/><rect x="56" y="73" width="26" height="8" rx="2" fill="#f87171"/><path d="M31 81 Q50 92 69 81" fill="none" stroke="#fecdd3" stroke-width="3" stroke-dasharray="4,4"/></svg>`,
+            
+            'winter_hat': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M22 65 C20 30 80 30 78 65 Z" fill="#0284c7"/><rect x="18" y="62" width="64" height="18" rx="6" fill="#38bdf8"/><circle cx="50" cy="22" r="12" fill="#ffffff"/><path d="M35 62 L35 80 M50 62 L50 80 M65 62 L65 80" stroke="#0284c7" stroke-width="2"/></svg>`,
+            
+            'snow_boots': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M25 30 L50 30 L48 65 L72 65 C82 65 85 75 85 82 L20 82 L25 30 Z" fill="#0369a1"/><rect x="22" y="25" width="30" height="10" rx="4" fill="#ffffff"/><rect x="18" y="80" width="70" height="7" fill="#1e293b" rx="2"/><line x1="38" y1="42" x2="48" y2="42" stroke="#f8fafc" stroke-width="3"/><line x1="36" y1="52" x2="46" y2="52" stroke="#f8fafc" stroke-width="3"/></svg>`,
+            
+            'sled': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M15 45 L70 40 L82 52 L12 55 Z" fill="#dc2626"/><rect x="20" y="55" width="8" height="15" fill="#78350f"/><rect x="60" y="52" width="8" height="15" fill="#78350f"/><path d="M10 72 L80 72 C90 72 92 60 85 60" fill="none" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/><path d="M5 78 L80 78 C92 78 95 60 88 60" fill="none" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/></svg>`,
+            
+            'ice': `<svg viewBox="0 0 100 100" class="w-full h-full"><polygon points="25,35 55,20 80,38 50,55" fill="#7dd3fc"/><polygon points="25,35 50,55 50,85 25,65" fill="#38bdf8"/><polygon points="50,55 80,38 80,68 50,85" fill="#0284c7"/><polygon points="35,42 55,32 70 42 50 50" fill="#ffffff" opacity="0.5"/></svg>`,
+            
+            'winter_coat': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M28 20 C40 10 60 10 72 20 L90 40 L78 50 L75 85 L25 85 L22 50 L10 40 Z" fill="#2563eb"/><path d="M35 18 C45 28 55 28 65 18 C70 12 30 12 35 18 Z" fill="#f8fafc"/><line x1="50" y1="24" x2="50" y2="85" stroke="#1d4ed8" stroke-width="4"/><circle cx="50" cy="35" r="3" fill="#facc15"/><circle cx="50" cy="52" r="3" fill="#facc15"/><circle cx="50" cy="68" r="3" fill="#facc15"/></svg>`,
+
+            // SPRING ITEMS
+            'flowers': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M50 50 L50 88 M32 60 L32 88 M68 60 L68 88" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/><path d="M50 70 Q62 60 62 70 Q50 78 50 70 Z" fill="#22c55e"/><circle cx="50" cy="35" r="10" fill="#facc15"/><circle cx="50" cy="20" r="8" fill="#ec4899"/><circle cx="63" cy="28" r="8" fill="#ec4899"/><circle cx="60" cy="43" r="8" fill="#ec4899"/><circle cx="40" cy="43" r="8" fill="#ec4899"/><circle cx="37" cy="28" r="8" fill="#ec4899"/><circle cx="32" cy="50" r="5" fill="#a855f7"/><circle cx="32" cy="42" r="4" fill="#a855f7"/><circle cx="68" cy="50" r="5" fill="#3b82f6"/><circle cx="68" cy="42" r="4" fill="#3b82f6"/></svg>`,
+            
+            'rain_cloud': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M25 45 C15 45 10 32 22 22 C32 10 52 12 58 22 C68 12 88 22 82 35 C92 42 88 55 75 55 L25 55 Z" fill="#38bdf8"/><path d="M30 65 L25 80 M50 65 L45 80 M70 65 L65 80" stroke="#0284c7" stroke-width="4" stroke-linecap="round"/></svg>`,
+            
+            'umbrella': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M12 50 C12 22 88 22 88 50 Z" fill="#f43f5e"/><path d="M12 50 Q25 42 37 50 Q50 42 63 50 Q75 42 88 50 Z" fill="#ffffff"/><line x1="50" y1="20" x2="50" y2="78" stroke="#475569" stroke-width="4"/><path d="M50 78 C50 86 40 86 40 80" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round"/></svg>`,
+            
+            'rain_puddle': `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="55" rx="42" ry="22" fill="#38bdf8"/><ellipse cx="50" cy="55" rx="32" ry="15" fill="#7dd3fc"/><ellipse cx="45" cy="53" rx="20" ry="8" fill="#bae6fd"/><path d="M25 50 Q30 45 35 50 M60 58 Q68 53 75 58" fill="none" stroke="#ffffff" stroke-width="2"/></svg>`,
+            
+            'baby_bird': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M20 65 Q50 85 80 65 L75 80 Q50 95 25 80 Z" fill="#78350f"/><ellipse cx="50" cy="52" rx="18" ry="16" fill="#facc15"/><circle cx="50" cy="32" r="13" fill="#fde047"/><circle cx="54" cy="30" r="2.5" fill="#0f172a"/><polygon points="58,32 72,35 58,38" fill="#f97316"/><path d="M35 32 C30 20 40 18 42 24" fill="none" stroke="#facc15" stroke-width="3"/></svg>`,
+            
+            'blooming_tree': `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="44" y="55" width="12" height="35" rx="4" fill="#78350f"/><circle cx="50" cy="38" r="28" fill="#16a34a"/><circle cx="35" cy="30" r="10" fill="#f472b6"/><circle cx="62" cy="28" r="11" fill="#f472b6"/><circle cx="50" cy="22" r="12" fill="#f472b6"/><circle cx="32" cy="45" r="9" fill="#f472b6"/><circle cx="65" cy="45" r="9" fill="#f472b6"/><circle cx="50" cy="42" r="12" fill="#f472b6"/><circle cx="50" cy="42" r="4" fill="#fde047"/></svg>`,
+
+            // SUMMER ITEMS
+            'bright_sun': `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="22" fill="#facc15"/><g stroke="#f59e0b" stroke-width="5" stroke-linecap="round"><line x1="50" y1="12" x2="50" y2="20"/><line x1="50" y1="80" x2="50" y2="88"/><line x1="12" y1="50" x2="20" y2="50"/><line x1="80" y1="50" x2="88" y2="50"/><line x1="23" y1="23" x2="29" y2="29"/><line x1="71" y1="71" x2="77" y2="77"/><line x1="23" y1="77" x2="29" y2="71"/><line x1="71" y1="29" x2="77" y2="23"/></g><circle cx="43" cy="46" r="2.5" fill="#78350f"/><circle cx="57" cy="46" r="2.5" fill="#78350f"/><path d="M43 56 Q50 62 57 56" fill="none" stroke="#78350f" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+            
+            'beach_umbrella': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M15 45 C15 20 85 20 85 45 Z" fill="#eab308"/><path d="M38 23 C28 32 25 45 25 45 L50 45 L50 20 Z" fill="#ef4444"/><path d="M62 23 C72 32 75 45 75 45 L50 45 L50 20 Z" fill="#ef4444"/><line x1="50" y1="20" x2="50" y2="85" stroke="#e2e8f0" stroke-width="5"/><path d="M10 82 Q50 78 90 82 L90 92 L10 92 Z" fill="#fde047"/></svg>`,
+            
+            'sunglasses': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M15 40 L38 40 C48 40 46 68 35 68 C22 68 15 55 15 40 Z" fill="#0f172a"/><path d="M85 40 L62 40 C52 40 54 68 65 68 C78 68 85 55 85 40 Z" fill="#0f172a"/><rect x="38" y="42" width="24" height="5" rx="2" fill="#334155"/><line x1="15" y1="42" x2="5" y2="35" stroke="#0f172a" stroke-width="4"/><line x1="85" y1="42" x2="95" y2="35" stroke="#0f172a" stroke-width="4"/><path d="M20 45 L32 45" stroke="#ffffff" stroke-width="2" opacity="0.6"/><path d="M68 45 L80 45" stroke="#ffffff" stroke-width="2" opacity="0.6"/></svg>`,
+            
+            'swimming_goggles': `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="18" y="40" width="28" height="22" rx="10" fill="#06b6d4" stroke="#0891b2" stroke-width="3"/><rect x="54" y="40" width="28" height="22" rx="10" fill="#06b6d4" stroke="#0891b2" stroke-width="3"/><line x1="46" y1="50" x2="54" y2="50" stroke="#0891b2" stroke-width="4"/><path d="M18 50 L5 48 M82 50 L95 48" stroke="#0891b2" stroke-width="5"/><ellipse cx="32" cy="51" rx="8" ry="5" fill="#cff4fc"/><ellipse cx="68" cy="51" rx="8" ry="5" fill="#cff4fc"/></svg>`,
+            
+            'ice_cream': `<svg viewBox="0 0 100 100" class="w-full h-full"><polygon points="50,88 32,50 68,50" fill="#d97706"/><path d="M32 50 L68 50 M38 60 L62 60 M44 72 L56 72" stroke="#b45309" stroke-width="2"/><circle cx="50" cy="42" r="18" fill="#f472b6"/><circle cx="50" cy="28" r="15" fill="#fef08a"/><circle cx="50" cy="12" r="6" fill="#dc2626"/></svg>`,
+            
+            'sand_castle': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M15 85 L85 85 L80 55 L70 55 L70 42 L62 42 L62 55 L38 55 L38 42 L30 42 L30 55 L20 55 Z" fill="#eab308"/><rect x="42" y="30" width="16" height="25" fill="#ca8a04"/><path d="M50 10 L50 30 M50 10 L62 15 L50 20" fill="#ef4444" stroke="#ef4444" stroke-width="2"/><rect x="45" y="65" width="10" height="20" rx="5" fill="#713f12"/></svg>`,
+            
+            'shorts': `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M25 30 L75 30 L80 70 L52 70 L50 48 L48 70 L20 70 Z" fill="#0284c7"/><rect x="25" y="30" width="50" height="8" fill="#38bdf8" rx="2"/><circle cx="50" cy="34" r="3" fill="#ffffff"/><path d="M48 34 Q42 42 38 40 M52 34 Q58 42 62 40" stroke="#ffffff" stroke-width="2" fill="none"/></svg>`
+        };
+
+        const SEASONS_DATA = {
+            fall: {
+                id: 'fall',
+                name: 'FALL',
+                color: '#ea580c',
+                bgColor: '#fff7ed',
+                borderColor: '#fdba74',
+                icon: '🍂',
+                speechName: 'Fall',
+                items: [
+                    { id: 'fall_leaves', name: 'FALL LEAVES', speech: 'Fall Leaves' },
+                    { id: 'pumpkin', name: 'PUMPKIN', speech: 'Pumpkin' },
+                    { id: 'apple', name: 'APPLE', speech: 'Apple' },
+                    { id: 'sweater', name: 'SWEATER', speech: 'Sweater' },
+                    { id: 'rain_boots', name: 'RAIN BOOTS', speech: 'Rain Boots' },
+                    { id: 'fall_tree', name: 'FALL TREE', speech: 'Fall Tree' },
+                    { id: 'wind', name: 'WIND', speech: 'Wind' },
+                    { id: 'rain', name: 'RAIN', speech: 'Rain' }
+                ]
+            },
+            winter: {
+                id: 'winter',
+                name: 'WINTER',
+                color: '#0284c7',
+                bgColor: '#f0f9ff',
+                borderColor: '#7dd3fc',
+                icon: '❄️',
+                speechName: 'Winter',
+                items: [
+                    { id: 'snowman', name: 'SNOWMAN', speech: 'Snowman' },
+                    { id: 'snowflake', name: 'SNOWFLAKE', speech: 'Snowflake' },
+                    { id: 'mittens', name: 'MITTENS', speech: 'Mittens' },
+                    { id: 'winter_hat', name: 'WINTER HAT', speech: 'Winter Hat' },
+                    { id: 'snow_boots', name: 'SNOW BOOTS', speech: 'Snow Boots' },
+                    { id: 'sled', name: 'SLED', speech: 'Sled' },
+                    { id: 'ice', name: 'ICE', speech: 'Ice' },
+                    { id: 'winter_coat', name: 'WINTER COAT', speech: 'Winter Coat' }
+                ]
+            },
+            spring: {
+                id: 'spring',
+                name: 'SPRING',
+                color: '#16a34a',
+                bgColor: '#f0fdf4',
+                borderColor: '#86efac',
+                icon: '🌷',
+                speechName: 'Spring',
+                items: [
+                    { id: 'flowers', name: 'FLOWERS', speech: 'Flowers' },
+                    { id: 'rain_cloud', name: 'RAIN CLOUD', speech: 'Rain Cloud' },
+                    { id: 'umbrella', name: 'UMBRELLA', speech: 'Umbrella' },
+                    { id: 'rain_puddle', name: 'RAIN PUDDLE', speech: 'Rain Puddle' },
+                    { id: 'baby_bird', name: 'BABY BIRD', speech: 'Baby Bird' },
+                    { id: 'blooming_tree', name: 'BLOOMING TREE', speech: 'Blooming Tree' }
+                ]
+            },
+            summer: {
+                id: 'summer',
+                name: 'SUMMER',
+                color: '#ca8a04',
+                bgColor: '#fefce8',
+                borderColor: '#fde047',
+                icon: '☀️',
+                speechName: 'Summer',
+                items: [
+                    { id: 'bright_sun', name: 'BRIGHT SUN', speech: 'Bright Sun' },
+                    { id: 'beach_umbrella', name: 'BEACH UMBRELLA', speech: 'Beach Umbrella' },
+                    { id: 'sunglasses', name: 'SUNGLASSES', speech: 'Sunglasses' },
+                    { id: 'swimming_goggles', name: 'SWIM GOGGLES', speech: 'Swim Goggles' },
+                    { id: 'ice_cream', name: 'ICE CREAM', speech: 'Ice Cream' },
+                    { id: 'sand_castle', name: 'SAND CASTLE', speech: 'Sand Castle' },
+                    { id: 'shorts', name: 'SHORTS', speech: 'Shorts' }
+                ]
+            }
+        };
+
+        // App State
+        let appState = {
+            currentStudent: 'student1',
+            students: {
+                student1: { name: 'Student 1', avatar: '🦊', stars: 0, level: 1 },
+                student2: { name: 'Student 2', avatar: '🐼', stars: 0, level: 1 }
+            },
+            settings: {
+                speechEnabled: true,
+                soundEffects: true,
+                celebrations: true
+            },
+            activeSeasonId: 'fall',
+            activeLevelNum: 1,
+            activeQuestion: null,
+            selectedSortingItem: null
+        };
+
+        // Web Audio API Context for Chimes
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    audioCtx = new AudioContext();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        /**
+         * Text-to-Speech Engine using window.speechSynthesis
+         */
+        function speakText(text) {
+            if (!appState.settings.speechEnabled) return;
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop ongoing speech
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.85; // Slightly slower, clear speed for young learners
+                utterance.pitch = 1.0;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        /**
+         * Web Audio Synthesizer for Chimes & Tones
+         */
+        function playSound(type) {
+            if (!appState.settings.soundEffects) return;
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+
+                if (type === 'correct') {
+                    // Ascending major chime (C5 -> E5 -> G5)
+                    const notes = [523.25, 659.25, 783.99];
+                    notes.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.value = freq;
+                        
+                        gain.gain.setValueAtTime(0.15, ctx.currentTime + idx * 0.1);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.1 + 0.35);
+                        
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        
+                        osc.start(ctx.currentTime + idx * 0.1);
+                        osc.stop(ctx.currentTime + idx * 0.1 + 0.4);
+                    });
+                } else if (type === 'try_again') {
+                    // Soft low mellow boop tone (non-punitive)
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(260, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.2);
+                    
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.3);
+                }
+            } catch (e) {
+                console.log('Audio Context playback error:', e);
+            }
+        }
+
+        function saveStateToStorage() {
+            try {
+                localStorage.setItem('seasons_app_state', JSON.stringify(appState));
+            } catch (e) {}
+        }
+
+        function loadStateFromStorage() {
+            try {
+                const saved = localStorage.getItem('seasons_app_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    appState = { ...appState, ...parsed };
+                }
+            } catch (e) {}
+        }
+
+        function getRandomItem(array) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function getAllItems() {
+            let items = [];
+            Object.values(SEASONS_DATA).forEach(season => {
+                season.items.forEach(item => {
+                    items.push({ ...item, seasonId: season.id });
+                });
+            });
+            return items;
+        }
+
+        function updateHeaderUI() {
+            const currentStudentObj = appState.students[appState.currentStudent];
+            document.getElementById('profile-name').innerText = currentStudentObj.name;
+            document.getElementById('profile-avatar').innerText = currentStudentObj.avatar;
+            document.getElementById('stars-count').innerText = currentStudentObj.stars;
+            
+            const audioBtn = document.getElementById('btn-audio-toggle');
+            audioBtn.innerText = appState.settings.speechEnabled ? '🔊' : '🔇';
+        }
+
+        function goToHome() {
+            saveStateToStorage();
+            renderHomeScreen();
+        }
+
+        function toggleStudentProfile() {
+            appState.currentStudent = appState.currentStudent === 'student1' ? 'student2' : 'student1';
+            updateHeaderUI();
+            speakText("Switched to " + appState.students[appState.currentStudent].name);
+            saveStateToStorage();
+            goToHome();
+        }
+
+        function toggleAudio() {
+            appState.settings.speechEnabled = !appState.settings.speechEnabled;
+            appState.settings.soundEffects = appState.settings.speechEnabled;
+            updateHeaderUI();
+            if (appState.settings.speechEnabled) {
+                speakText("Sound on");
+            }
+            saveStateToStorage();
+        }
+
+        function renderHomeScreen() {
+            updateHeaderUI();
+            const viewport = document.getElementById('app-viewport');
+            
+            viewport.innerHTML = `
+                <div class="w-full space-y-6 text-center">
+                    
+                    <!-- Welcome Header -->
+                    <div class="bg-white p-6 rounded-3xl border-4 border-slate-200 card-shadow max-w-3xl mx-auto space-y-2">
+                        <h1 class="text-3xl md:text-4xl font-bold text-slate-800 flex items-center justify-center gap-3">
+                            <span>🍁</span> The Four Seasons ☀️️
+                        </h1>
+                        <p class="text-slate-600 text-lg md:text-xl font-semibold">Choose a season to learn and play!</p>
+                    </div>
+
+                    <!-- 4 Season Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                        ${Object.values(SEASONS_DATA).map(season => `
+                            <div class="btn-touch relative rounded-3xl p-6 border-4 card-shadow flex flex-col items-center justify-between gap-4 cursor-pointer"
+                                 style="background-color: ${season.bgColor}; border-color: ${season.borderColor};"
+                                 onclick="selectSeason('${season.id}')">
+                                
+                                <!-- Speaker Button -->
+                                <button onclick="event.stopPropagation(); speakText('${season.speechName}')" 
+                                        class="absolute top-4 right-4 bg-white/80 hover:bg-white p-3 rounded-2xl border-2 border-slate-200 text-2xl shadow-sm"
+                                        aria-label="Listen to ${season.name}">
+                                    🔊
+                                </button>
+
+                                <div class="text-6xl md:text-7xl mt-2">${season.icon}</div>
+
+                                <div class="text-center space-y-1">
+                                    <div class="text-3xl md:text-4xl font-extrabold tracking-wide" style="color: ${season.color}">
+                                        ${season.name}
+                                    </div>
+                                </div>
+
+                                <button class="w-full py-3 px-6 rounded-2xl text-white font-bold text-xl shadow-md border-b-4 border-black/20"
+                                        style="background-color: ${season.color}">
+                                    PLAY ${season.name}
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <!-- Level Quick Selection Bar -->
+                    <div class="bg-white p-6 rounded-3xl border-4 border-slate-200 card-shadow max-w-4xl mx-auto space-y-3">
+                        <div class="text-slate-700 font-bold text-lg md:text-xl">Practice Levels (1 - 7)</div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+                            ${[1,2,3,4,5,6,7].map(lvl => `
+                                <button onclick="startSpecificLevel(${lvl})" 
+                                        class="btn-touch p-3 rounded-2xl font-bold text-lg border-2 border-slate-300 hover:bg-amber-100 bg-slate-50 text-slate-800 flex flex-col items-center justify-center">
+                                    <span class="text-xs text-slate-500 font-bold">LEVEL</span>
+                                    <span class="text-xl text-amber-600">${lvl}</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                </div>
+            `;
+        }
+
+        function selectSeason(seasonId) {
+            appState.activeSeasonId = seasonId;
+            speakText(SEASONS_DATA[seasonId].speechName);
+            startLevel(appState.students[appState.currentStudent].level || 1);
+        }
+
+        function startSpecificLevel(levelNum) {
+            startLevel(levelNum);
+        }
+
+        function startLevel(levelNum) {
+            appState.activeLevelNum = levelNum;
+            generateQuestion();
+            renderGameView();
+        }
+
+        function generateQuestion() {
+            const season = SEASONS_DATA[appState.activeSeasonId] || SEASONS_DATA.fall;
+            const targetItem = getRandomItem(season.items);
+            const allItems = getAllItems();
+
+            let question = {
+                level: appState.activeLevelNum,
+                seasonId: season.id,
+                targetItem: targetItem,
+                choices: []
+            };
+
+            if (appState.activeLevelNum === 1) {
+                // LEVEL 1: Picture -> Same Picture (2 choices)
+                const distractor = getRandomItem(allItems.filter(i => i.id !== targetItem.id));
+                question.choices = shuffleArray([
+                    { ...targetItem, isCorrect: true },
+                    { ...distractor, isCorrect: false }
+                ]);
+            } 
+            else if (appState.activeLevelNum === 2) {
+                // LEVEL 2: Picture -> Picture (3 choices)
+                const distractors = shuffleArray(allItems.filter(i => i.id !== targetItem.id)).slice(0, 2);
+                question.choices = shuffleArray([
+                    { ...targetItem, isCorrect: true },
+                    ...distractors.map(d => ({ ...d, isCorrect: false }))
+                ]);
+            }
+            else if (appState.activeLevelNum === 3) {
+                // LEVEL 3: Picture -> Seasonal Picture
+                // Target is an item. Choice 1 is ANOTHER item from same season. Choices 2 & 3 are from different seasons.
+                const sameSeasonOtherItem = getRandomItem(season.items.filter(i => i.id !== targetItem.id)) || targetItem;
+                const otherSeasonItems = shuffleArray(allItems.filter(i => i.seasonId !== season.id)).slice(0, 2);
+                
+                question.choices = shuffleArray([
+                    { ...sameSeasonOtherItem, isCorrect: true },
+                    ...otherSeasonItems.map(d => ({ ...d, isCorrect: false }))
+                ]);
+            }
+            else if (appState.activeLevelNum === 4) {
+                // LEVEL 4: Picture -> Word (3 word choices)
+                const distractors = shuffleArray(allItems.filter(i => i.id !== targetItem.id)).slice(0, 2);
+                question.choices = shuffleArray([
+                    { ...targetItem, isCorrect: true },
+                    ...distractors.map(d => ({ ...d, isCorrect: false }))
+                ]);
+            }
+            else if (appState.activeLevelNum === 5) {
+                // LEVEL 5: Word -> Picture (3 picture choices)
+                const distractors = shuffleArray(allItems.filter(i => i.id !== targetItem.id)).slice(0, 2);
+                question.choices = shuffleArray([
+                    { ...targetItem, isCorrect: true },
+                    ...distractors.map(d => ({ ...d, isCorrect: false }))
+                ]);
+            }
+            else if (appState.activeLevelNum === 6) {
+                // LEVEL 6: Word -> Word (3 word choices)
+                const distractors = shuffleArray(allItems.filter(i => i.id !== targetItem.id)).slice(0, 2);
+                question.choices = shuffleArray([
+                    { ...targetItem, isCorrect: true },
+                    ...distractors.map(d => ({ ...d, isCorrect: false }))
+                ]);
+            }
+            else if (appState.activeLevelNum === 7) {
+                // LEVEL 7: Season Sorting
+                // Target Season Bin. 4 Items (2 belong to season, 2 belong to other seasons)
+                const seasonItems = shuffleArray(season.items).slice(0, 2);
+                const otherItems = shuffleArray(allItems.filter(i => i.seasonId !== season.id)).slice(0, 2);
+                
+                question.sortingItems = shuffleArray([
+                    ...seasonItems.map(i => ({ ...i, belongsToSeason: true })),
+                    ...otherItems.map(i => ({ ...i, belongsToSeason: false }))
+                ]);
+                question.sortedCount = 0;
+            }
+
+            appState.activeQuestion = question;
+        }
+
+        function renderGameView() {
+            updateHeaderUI();
+            const viewport = document.getElementById('app-viewport');
+            const season = SEASONS_DATA[appState.activeSeasonId];
+            const q = appState.activeQuestion;
+
+            if (q.level === 7) {
+                renderSortingView();
+                return;
+            }
+
+            viewport.innerHTML = `
+                <div class="w-full max-w-4xl mx-auto space-y-6">
+                    
+                    <!-- Level Title & Navigation Header -->
+                    <div class="flex items-center justify-between bg-white p-4 rounded-3xl border-4 card-shadow"
+                         style="border-color: ${season.borderColor}">
+                        <div class="flex items-center gap-3">
+                            <span class="text-4xl">${season.icon}</span>
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">LEVEL ${q.level}</span>
+                                <h2 class="text-2xl font-bold" style="color: ${season.color}">
+                                    ${getLevelTitle(q.level)}
+                                </h2>
+                            </div>
+                        </div>
+
+                        <!-- Level Switcher -->
+                        <div class="flex gap-2">
+                            ${q.level > 1 ? `<button onclick="startLevel(${q.level - 1})" class="btn-touch p-3 bg-slate-100 hover:bg-slate-200 rounded-2xl font-bold text-slate-700">◀ Prev</button>` : ''}
+                            ${q.level < 7 ? `<button onclick="startLevel(${q.level + 1})" class="btn-touch p-3 bg-slate-100 hover:bg-slate-200 rounded-2xl font-bold text-slate-700">Next ▶</button>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- TARGET AREA -->
+                    <div class="bg-white p-6 md:p-8 rounded-3xl border-4 card-shadow flex flex-col items-center justify-center gap-4 relative"
+                         style="border-color: ${season.borderColor}">
+                        
+                        <!-- Speaker Button for Target -->
+                        <button onclick="speakTargetItem()" class="absolute top-4 right-4 bg-amber-100 hover:bg-amber-200 p-3 rounded-2xl border-2 border-amber-300 text-2xl" aria-label="Listen">
+                            🔊
+                        </button>
+
+                        <div class="text-center space-y-2">
+                            <div class="text-sm font-bold text-slate-400 uppercase tracking-widest">Target Item</div>
+                            
+                            ${(q.level === 5 || q.level === 6) ? `
+                                <!-- Word Target -->
+                                <div onclick="speakTargetItem()" class="cursor-pointer bg-amber-50 border-4 border-amber-300 px-8 py-6 rounded-3xl text-4xl md:text-5xl font-extrabold text-amber-900 tracking-wide inline-flex items-center gap-4">
+                                    <span>${q.targetItem.name}</span>
+                                    <span class="text-3xl">🔊</span>
+                                </div>
+                            ` : `
+                                <!-- SVG Picture Target -->
+                                <div onclick="speakTargetItem()" class="cursor-pointer w-44 h-44 md:w-52 md:h-52 bg-slate-50 border-4 border-slate-200 rounded-3xl p-4 flex items-center justify-center hover:scale-105 transition-transform">
+                                    ${SVG_MAP[q.targetItem.id] || ''}
+                                </div>
+                                <div class="text-2xl font-bold text-slate-800">${q.targetItem.name}</div>
+                            `}
+                        </div>
+                    </div>
+
+                    <!-- CHOICES AREA -->
+                    <div class="grid ${q.choices.length === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-3'} gap-6">
+                        ${q.choices.map((choice, index) => `
+                            <button id="choice-btn-${index}" 
+                                    onclick="handleChoiceClick(${index})"
+                                    class="btn-touch bg-white hover:bg-amber-50 p-6 rounded-3xl border-4 border-slate-200 card-shadow flex flex-col items-center justify-center gap-4 transition-all">
+                                
+                                ${(q.level === 4 || q.level === 6) ? `
+                                    <!-- Word Choice Button -->
+                                    <div class="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">
+                                        <span>${choice.name}</span>
+                                        <span class="text-xl text-slate-400">🔊</span>
+                                    </div>
+                                ` : `
+                                    <!-- Picture Choice Button -->
+                                    <div class="w-32 h-32 md:w-40 md:h-40 p-2">
+                                        ${SVG_MAP[choice.id] || ''}
+                                    </div>
+                                    ${q.level === 1 || q.level === 2 ? `<div class="text-xl font-bold text-slate-700">${choice.name}</div>` : ''}
+                                `}
+                            </button>
+                        `).join('')}
+                    </div>
+
+                </div>
+            `;
+
+            // Automatically speak target on question load
+            setTimeout(() => speakTargetItem(), 300);
+        }
+
+        function renderSortingView() {
+            const viewport = document.getElementById('app-viewport');
+            const season = SEASONS_DATA[appState.activeSeasonId];
+            const q = appState.activeQuestion;
+
+            viewport.innerHTML = `
+                <div class="w-full max-w-4xl mx-auto space-y-6">
+                    
+                    <!-- Header -->
+                    <div class="flex items-center justify-between bg-white p-4 rounded-3xl border-4 card-shadow"
+                         style="border-color: ${season.borderColor}">
+                        <div class="flex items-center gap-3">
+                            <span class="text-4xl">${season.icon}</span>
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">LEVEL 7</span>
+                                <h2 class="text-2xl font-bold" style="color: ${season.color}">Season Sorting</h2>
+                            </div>
+                        </div>
+                        <button onclick="startLevel(6)" class="btn-touch p-3 bg-slate-100 hover:bg-slate-200 rounded-2xl font-bold text-slate-700">◀ Level 6</button>
+                    </div>
+
+                    <!-- SEASON BIN (TARGET AREA) -->
+                    <div id="season-bin" 
+                         onclick="handleBinTap()"
+                         class="bg-white p-6 rounded-3xl border-8 border-dashed card-shadow flex flex-col items-center justify-center gap-3 transition-colors"
+                         style="border-color: ${season.color}; background-color: ${season.bgColor}">
+                        
+                        <div class="text-5xl">${season.icon}</div>
+                        <div class="text-3xl font-extrabold" style="color: ${season.color}">
+                            TAP OR DRAG ITEMS INTO THE ${season.name} BOX
+                        </div>
+                        <div class="text-sm font-bold text-slate-500">
+                            Tap an item below, then tap here to place it!
+                        </div>
+                    </div>
+
+                    <!-- REMAINING ITEMS TO SORT -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        ${q.sortingItems.map((item, idx) => `
+                            <div id="sorting-item-${idx}" 
+                                 onclick="selectSortingItem(${idx})"
+                                 class="btn-touch bg-white p-4 rounded-3xl border-4 ${appState.selectedSortingItem === idx ? 'border-amber-500 ring-4 ring-amber-200 scale-105' : 'border-slate-200'} card-shadow flex flex-col items-center justify-center gap-2 cursor-pointer transition-all">
+                                
+                                <div class="w-24 h-24 p-1">
+                                    ${SVG_MAP[item.id] || ''}
+                                </div>
+                                <div class="text-lg font-bold text-slate-800 text-center">${item.name}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                </div>
+            `;
+        }
+
+        function getLevelTitle(levelNum) {
+            switch(levelNum) {
+                case 1: return "Match Same Picture";
+                case 2: return "Match 3 Pictures";
+                case 3: return "Match Season Picture";
+                case 4: return "Picture to Word";
+                case 5: return "Word to Picture";
+                case 6: return "Word to Word";
+                case 7: return "Season Sorting";
+                default: return "Season Activity";
+            }
+        }
+
+        function speakTargetItem() {
+            if (!appState.activeQuestion) return;
+            const target = appState.activeQuestion.targetItem;
+            if (appState.activeLevelNum === 3) {
+                speakText("Find picture for " + SEASONS_DATA[appState.activeSeasonId].speechName);
+            } else {
+                speakText(target.speech);
+            }
+        }
+
+        function handleChoiceClick(choiceIdx) {
+            const q = appState.activeQuestion;
+            const chosen = q.choices[choiceIdx];
+            const btnEl = document.getElementById(`choice-btn-${choiceIdx}`);
+
+            // Speak the choice
+            speakText(chosen.speech);
+
+            if (chosen.isCorrect) {
+                // Correct Answer!
+                playSound('correct');
+                btnEl.classList.remove('border-slate-200');
+                btnEl.classList.add('border-emerald-500', 'bg-emerald-50');
+                
+                // Award Star
+                appState.students[appState.currentStudent].stars += 1;
+                updateHeaderUI();
+
+                // Trigger Celebration
+                triggerStarCelebration();
+
+                const praiseList = ["Great job!", "Match!", "Wonderful!", "You got it!"];
+                const praise = getRandomItem(praiseList);
+                setTimeout(() => speakText(praise), 400);
+
+                // Auto advance after 1.5s
+                setTimeout(() => {
+                    generateQuestion();
+                    renderGameView();
+                }, 1600);
+
+            } else {
+                // Non-punitive incorrect answer
+                playSound('try_again');
+                btnEl.classList.add('gentle-wobble');
+                setTimeout(() => btnEl.classList.remove('gentle-wobble'), 500);
+
+                setTimeout(() => speakText("Try again"), 300);
+            }
+        }
+
+        function selectSortingItem(idx) {
+            appState.selectedSortingItem = idx;
+            const item = appState.activeQuestion.sortingItems[idx];
+            speakText(item.speech);
+            renderSortingView();
+        }
+
+        function handleBinTap() {
+            if (appState.selectedSortingItem === null) {
+                speakText("Tap an item first!");
+                return;
+            }
+
+            const q = appState.activeQuestion;
+            const item = q.sortingItems[appState.selectedSortingItem];
+
+            if (item.belongsToSeason) {
+                // Correctly placed!
+                playSound('correct');
+                triggerStarCelebration();
+                speakText("Great job! " + item.speech + " belongs to " + SEASONS_DATA[appState.activeSeasonId].speechName);
+
+                // Remove item from choices
+                q.sortingItems.splice(appState.selectedSortingItem, 1);
+                appState.selectedSortingItem = null;
+
+                appState.students[appState.currentStudent].stars += 1;
+                updateHeaderUI();
+
+                if (q.sortingItems.length === 0) {
+                    // Level complete!
+                    setTimeout(() => {
+                        speakText("Season sorting completed! Excellent work!");
+                        generateQuestion();
+                        renderSortingView();
+                    }, 1800);
+                } else {
+                    renderSortingView();
+                }
+            } else {
+                // Belongs to another season
+                playSound('try_again');
+                speakText("Try again.");
+            }
+        }
+
+        function triggerStarCelebration() {
+            if (!appState.settings.celebrations) return;
+
+            const overlay = document.getElementById('celebration-overlay');
+            const container = document.getElementById('star-container');
+            container.innerHTML = '';
+            overlay.classList.remove('hidden');
+
+            for (let i = 0; i < 12; i++) {
+                const star = document.createElement('div');
+                star.className = 'star-particle text-5xl';
+                star.innerText = '⭐';
+                star.style.left = `${(Math.random() - 0.5) * 200}px`;
+                star.style.top = `${(Math.random() - 0.5) * 200}px`;
+                container.appendChild(star);
+            }
+
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 1200);
+        }
+
+        function openTeacherModal() {
+            document.getElementById('teacher-s1-name').value = appState.students.student1.name;
+            document.getElementById('teacher-s2-name').value = appState.students.student2.name;
+            document.getElementById('teacher-modal').classList.remove('hidden');
+        }
+
+        function closeTeacherModal() {
+            saveStateToStorage();
+            document.getElementById('teacher-modal').classList.add('hidden');
+            renderHomeScreen();
+        }
+
+        function updateStudentName(studentKey, newName) {
+            if (!newName.trim()) return;
+            appState.students[studentKey].name = newName.trim();
+            updateHeaderUI();
+            saveStateToStorage();
+        }
+
+        function updateStudentAvatar(studentKey, avatar) {
+            appState.students[studentKey].avatar = avatar;
+            updateHeaderUI();
+            saveStateToStorage();
+        }
+
+        function toggleSpeechSetting() {
+            appState.settings.speechEnabled = !appState.settings.speechEnabled;
+            document.getElementById('teacher-toggle-speech').innerText = appState.settings.speechEnabled ? 'ENABLED' : 'DISABLED';
+            document.getElementById('teacher-toggle-speech').className = appState.settings.speechEnabled 
+                ? 'px-4 py-2 bg-emerald-500 text-white font-bold rounded-xl text-sm'
+                : 'px-4 py-2 bg-slate-400 text-white font-bold rounded-xl text-sm';
+            updateHeaderUI();
+            saveStateToStorage();
+        }
+
+        function toggleCelebrationSetting() {
+            appState.settings.celebrations = !appState.settings.celebrations;
+            document.getElementById('teacher-toggle-celeb').innerText = appState.settings.celebrations ? 'ENABLED' : 'DISABLED';
+            document.getElementById('teacher-toggle-celeb').className = appState.settings.celebrations 
+                ? 'px-4 py-2 bg-emerald-500 text-white font-bold rounded-xl text-sm'
+                : 'px-4 py-2 bg-slate-400 text-white font-bold rounded-xl text-sm';
+            saveStateToStorage();
+        }
+
+        function jumpToLevel(lvl) {
+            appState.students[appState.currentStudent].level = lvl;
+            closeTeacherModal();
+            startLevel(lvl);
+        }
+
+        function resetCurrentStudentProgress() {
+            appState.students[appState.currentStudent].stars = 0;
+            appState.students[appState.currentStudent].level = 1;
+            updateHeaderUI();
+            saveStateToStorage();
+            speakText("Progress reset.");
+            closeTeacherModal();
+        }
+
+        window.onload = function() {
+            loadStateFromStorage();
+            updateHeaderUI();
+            renderHomeScreen();
+        };
+    </script>
+</body>
+</html>
