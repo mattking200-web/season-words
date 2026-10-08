@@ -80,6 +80,26 @@
             outline: 4px solid #3b82f6;
             outline-offset: 4px;
         }
+    
+        /* ===== SEASON WEATHER (E2.4) - self-contained styles, no Tailwind needed ===== */
+        .sw{width:100%;max-width:960px;margin:0 auto;text-align:center;font-family:inherit}
+        .sw-card{background:#fff;border:4px solid #334155;border-radius:28px;padding:16px;margin-bottom:16px;position:relative}
+        .sw-top{display:flex;justify-content:center;align-items:center;gap:24px;flex-wrap:wrap;cursor:pointer}
+        .sw-big{font-size:clamp(72px,16vw,140px);line-height:1.1;display:block}
+        .sw-lbl{font-size:clamp(24px,5vw,40px);font-weight:800;color:#0f172a;display:block}
+        .sw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:16px}
+        .sw-btn{min-height:160px;background:#fff;border:6px solid #475569;border-radius:28px;padding:10px;cursor:pointer;font-family:inherit;font-size:20px;font-weight:700;color:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+        .sw-btn:active{transform:scale(.97)}
+        .sw-btn.ok{border-color:#15803d;background:#dcfce7!important}
+        .sw-btn.ok::after{content:'✓';font-size:40px;color:#15803d;font-weight:800}
+        .sw-btn:focus-visible,.sw-go:focus-visible{outline:5px solid #1d4ed8;outline-offset:3px}
+        .sw-go{font-family:inherit;font-size:30px;font-weight:800;padding:16px 40px;border-radius:24px;background:#1d4ed8;color:#fff;border:0;min-height:76px;margin:8px;cursor:pointer}
+        .sw-say{position:absolute;top:10px;right:10px;font-size:34px;width:76px;height:76px;border-radius:22px;border:4px solid #1d4ed8;background:#dbeafe;cursor:pointer}
+        .sw-bar{height:20px;background:#e2e8f0;border-radius:10px;overflow:hidden;margin-top:10px}
+        .sw-bar i{display:block;height:100%;background:#16a34a;transition:width .4s}
+        .sw-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;font-size:18px;font-weight:700;text-align:left}
+        [data-drag],[id^="sorting-item-"]{touch-action:none;cursor:grab}
+        @media (prefers-reduced-motion:reduce){.sw-bar i,.sw-btn{transition:none}}
     </style>
 </head>
 <body class="min-h-screen bg-slate-50 flex flex-col justify-between selection:bg-none">
@@ -222,6 +242,9 @@
                         <button onclick="jumpToLevel(7)" class="p-2 bg-white border-2 border-amber-300 rounded-xl font-bold text-amber-900 text-sm hover:bg-amber-100">L7: Season Sorting</button>
                     </div>
                 </div>
+
+                <!-- Season Weather progress (E2.4) -->
+                <div class="pt-2"><button onclick="swTeacher()" class="w-full px-4 py-3 bg-sky-100 hover:bg-sky-200 text-sky-900 font-bold rounded-xl border border-sky-300 text-sm">🌦️ Season Weather (E2.4) – Progress &amp; Teacher Info</button></div>
 
                 <!-- Reset Student Progress -->
                 <div class="pt-2 flex justify-between items-center">
@@ -1053,5 +1076,117 @@
             renderHomeScreen();
         };
     </script>
+<script>
+/* ===== SEASON WEATHER module (Ontario Gr.1 Science E2.4). Adds to the app; nothing above is changed. ===== */
+(function(){
+const D={ // key:[picture,WORD,(unused),background]
+sunny:['☀️','SUNNY'],rainy:['🌧️','RAINY'],snowy:['❄️','SNOWY'],cloudy:['☁️','CLOUDY'],windy:['💨','WINDY'],
+rain:['🌧️','RAIN'],snow:['🌨️','SNOW'],
+hot:['🔥','HOT','','#fee2e2'],warm:['🌤️','WARM','','#fef3c7'],cool:['🍂','COOL','','#ecfccb'],cold:['🥶','COLD','','#dbeafe'],
+fall:['🍂','FALL'],winter:['❄️','WINTER'],spring:['🌷','SPRING'],summer:['☀️','SUMMER'],
+leaf:['🍂','LEAVES'],wind:['💨','WIND'],snowman:['⛄','SNOWMAN'],flower:['🌷','FLOWERS'],swim:['🏊','SWIMMING'],
+mitten:['🧤','MITTENS'],beach:['🏖️','BEACH'],umb:['☂️','UMBRELLA'],ice:['🍦','ICE CREAM'],sun:['☀️','SUN']};
+const WX=['sunny','rainy','snowy','cloudy','windy'],TP=['hot','warm','cool','cold'],SE=['fall','winter','spring','summer'];
+const PR=['Great job!','You did it!','Wonderful!','Nice work!'];
+const sh=a=>shuffleArray(a),T=(p,top,ch,ok,o)=>({p,top,ch:sh(ch),ok,o:o||{}});
+const lc=k=>D[k][1].toLowerCase(),cap=s=>s[0].toUpperCase()+s.slice(1);
+const st=()=>{const s=appState.students[appState.currentStudent];s.sw=s.sw||{done:{}};
+ if(s.sw.v!==2){const o=s.sw.done||{},n={};Object.keys(o).forEach(k=>{k=+k;if(k<2)n[k]=1;else if(k>2)n[k-1]=1});s.sw.done=n;s.sw.v=2}return s.sw};
+const three=w=>[w,...sh(WX.filter(x=>x!=w)).slice(0,2)];
+const PQ={winter:['snow',['sunny','windy']],spring:['rain',['sunny','windy']],fall:['rain',['sunny','windy']],summer:['rain',['sunny','windy']]};
+const CMP=[['Which season is usually colder?','🥶','COLDER',['winter','summer'],'winter'],['Which season is usually warmer?','🌤️','WARMER',['summer','winter'],'summer'],
+ ['Which season is usually snowier?','🌨️','SNOWIER',['winter','summer'],'winter'],['Which season is usually cooler?','🍂','COOLER',['fall','summer'],'fall'],
+ ['Which season often has more rain?','🌧️','MORE RAIN',['spring','winter'],'spring'],['Which season is usually warmer?','🌤️','WARMER',['spring','winter'],'spring']];
+const SORT={fall:[['leaf','wind','rain'],['swim','snowman','flower']],winter:[['snow','mitten','snowman'],['swim','leaf','beach']],
+ spring:[['flower','rain','umb'],['snowman','swim','mitten']],summer:[['swim','ice','sun'],['snowman','mitten','leaf']]};
+const CH={summer:{t:['hot','warm'],b:['sunny','rainy'],bd:['snowy']},fall:{t:['cool'],b:['rainy','windy'],bd:['hot']},
+ winter:{t:['cold'],b:['snowy'],bd:['hot','warm']},spring:{t:['cool','warm'],b:['rainy','cloudy'],bd:['hot']}};
+const SWL=[
+ {n:'Same Weather',k:'Weather matching',e:'☀️',t:()=>sh(WX).map(w=>T('Find the same picture.',[w],three(w),[w],{picOnly:1,hide:1}))},
+ {n:'Weather Words',k:'Weather words',e:'📖',t:()=>sh(WX).map(w=>T('Find: '+lc(w),[w],three(w),[w],{wordOnly:1,hide:1}))},
+ {n:'Rain & Snow',k:'Precipitation',e:'🌧️',t:()=>[
+  T('Precipitation is water that falls from the sky.',['rain','snow'],[],[],{teach:1,txt:'Precipitation is water that falls from the sky.'}),
+  ...sh(['rain','snow']).map(w=>T('Find: '+lc(w),[w],['rain','snow','sunny'],[w],{wordOnly:1,hide:1})),
+  ...sh(SE).map(s=>T('What can fall from the sky in '+lc(s)+'?',[s],[PQ[s][0],...PQ[s][1]],[PQ[s][0]]))]},
+ {n:'Hot & Cold',k:'Temperature',e:'🌡️',t:()=>[
+  T('Temperature tells us how hot or cold it is.',TP,[],[],{teach:1,txt:'Temperature: how hot or cold it is.'}),
+  ...sh(TP).map(w=>T('Find: '+lc(w),[w],TP,[w],{wordOnly:1,hide:1})),
+  T('Which season is usually cold?',['cold'],['winter','summer','fall'],['winter']),
+  T('Which season is usually warm?',['warm'],['summer','winter','fall'],['summer']),
+  T('Which seasons are usually cool? Tap all that fit.',['cool'],SE,['fall','spring'])]},
+ {n:'Compare Seasons',k:'Comparing seasons',e:'↔️',t:()=>sh(CMP).map(c=>T(c[0],[],c[3],[c[4]],{q:c[1],qw:c[2]}))},
+ {n:'Sort It',k:'Sorting',e:'🧺',t:()=>sh(SE).map(s=>T('Tap what goes with '+lc(s)+'. Tap all that fit.',[s],[...SORT[s][0],...SORT[s][1]],SORT[s][0],{drop:1}))},
+ {n:'Challenge',k:'E2.4 Challenge',e:'🏆',t:()=>SE.flatMap(s=>{const c=CH[s];return[
+  T('What is '+lc(s)+' usually like?',[s],TP,c.t),
+  T('What might '+lc(s)+' weather bring?',[s],[...c.b,...c.bd],c.b),
+  T('What can fall from the sky in '+lc(s)+'?',[s],[PQ[s][0],...PQ[s][1]],[PQ[s][0]])]})}
+];
+let sw=null;const V=()=>document.getElementById('app-viewport');
+const open=i=>i==0||st().done[i-1]||st().all;
+const pct=()=>Math.round(100*SWL.filter((l,i)=>st().done[i]).length/SWL.length);
+window.swSay=k=>speakText(lc(k));
+window.swMenu=function(){sw=null;updateHeaderUI();const s=st();
+ V().innerHTML=`<div class="sw"><div class="sw-card"><span class="sw-lbl">🌦️ SEASON WEATHER</span><div class="sw-bar"><i style="width:${pct()}%"></i></div></div>
+ <div class="sw-grid">${SWL.map((l,i)=>open(i)?`<button class="sw-btn" onclick="swStart(${i})" aria-label="${l.n}"><span class="sw-big" style="font-size:72px">${l.e}</span><span class="sw-lbl">${i+1}</span><span>${l.n}</span>${s.done[i]?'<span style="font-size:36px;color:#15803d">✓</span>':''}</button>`
+ :`<button class="sw-btn" style="opacity:.4;cursor:default" aria-disabled="true"><span class="sw-big" style="font-size:72px">🔒</span><span class="sw-lbl">${i+1}</span></button>`).join('')}</div></div>`;};
+window.swStart=function(i){sw={i,t:SWL[i].t(),k:0,f:[]};speakText(SWL[i].n);setTimeout(swRender,250)};
+const dots=()=>{const q=sw.t[sw.k];return q.ok.length>1?'●'.repeat(sw.f.length)+'○'.repeat(q.ok.length-sw.f.length):''};
+window.swRender=function(){const q=sw.t[sw.k],o=q.o,n=sw.t.length;
+ const top=q.top.map(k=>`<div onclick="swSay('${k}')">${o.wordOnly?'':`<span class="sw-big">${D[k][0]}</span>`}${o.picOnly?'':`<span class="sw-lbl">${D[k][1]}</span>`}</div>`).join('');
+ V().innerHTML=`<div class="sw"><div class="sw-card" ${o.drop?'data-drop style="border-style:dashed;border-width:8px;background:#e0f2fe"':''}><div class="sw-bar" style="margin:0 90px 12px 0"><i style="width:${100*sw.k/n}%"></i></div>
+ <button class="sw-say" onclick="speakText(sw.t[sw.k].p)" aria-label="Listen">🔊</button>
+ ${o.q?`<span class="sw-big">${o.q}</span><span class="sw-lbl">${o.qw}</span>`:`<div class="sw-top">${top}</div>`}
+ ${o.txt?`<span class="sw-lbl" style="margin-top:12px">${o.txt}</span>`:''}<span id="swd" class="sw-lbl" style="color:#15803d">${dots()}</span></div>
+ ${o.teach?`<button class="sw-go" onclick="swNext()" aria-label="Next">▶</button>`:`<div class="sw-grid">${q.ch.map(k=>`<button class="sw-btn" id="swc-${k}" ${o.drop?`data-drag="${k}"`:''} ${D[k][3]?`style="background:${D[k][3]}"`:''} onclick="swTap('${k}')" aria-label="${D[k][1]}"><span class="sw-big">${D[k][0]}</span>${o.hide?'':`<span class="sw-lbl">${D[k][1]}</span>`}</button>`).join('')}</div>`}</div>`;
+ setTimeout(()=>speakText(q.p),300)};
+window.swNext=function(){sw.k++;sw.f=[];sw.k>=sw.t.length?swDone():swRender()};
+window.swTap=function(k){if(sw.lock)return;const q=sw.t[sw.k];speakText(lc(k));
+ if(!q.ok.includes(k)||sw.f.includes(k))return; // wrong choice: nothing happens
+ sw.f.push(k);document.getElementById('swc-'+k).classList.add('ok');playSound('correct');document.getElementById('swd').textContent=dots();
+ if(sw.f.length<q.ok.length)return;sw.lock=1;appState.students[appState.currentStudent].stars++;updateHeaderUI();saveStateToStorage();triggerStarCelebration();
+ setTimeout(()=>speakText(getRandomItem(PR)),700);
+ setTimeout(()=>{sw.lock=0;swNext()},2100)};
+window.swDone=function(){const s=st();s.done[sw.i]=true;saveStateToStorage();playSound('correct');triggerStarCelebration();speakText('You finished! Great work!');
+ const nx=sw.i+1<SWL.length;V().innerHTML=`<div class="sw"><div class="sw-card"><span class="sw-big">⭐⭐⭐</span><span class="sw-lbl">${SWL[sw.i].n} ✓</span></div>
+ ${nx?`<button class="sw-go" onclick="swStart(${sw.i+1})" aria-label="Next level">▶ ${SWL[sw.i+1].e}</button>`:''}<button class="sw-go" style="background:#475569" onclick="swMenu()" aria-label="Menu">🌦️</button></div>`};
+window.swTeacher=function(){document.getElementById('teacher-modal').classList.add('hidden');saveStateToStorage();
+ V().innerHTML=`<div class="sw" style="max-width:720px"><div class="sw-card" style="text-align:left"><span class="sw-lbl">Season Weather – Progress</span>
+ ${Object.entries(appState.students).map(([id,s])=>{const d=(s.sw&&s.sw.v===2&&s.sw.done)||{};const c=SWL.filter((l,i)=>d[i]).length;
+ return`<h3 style="font-size:22px;font-weight:800;margin-top:12px">${s.avatar} ${s.name} – ${c}/${SWL.length}</h3><div class="sw-bar"><i style="width:${100*c/SWL.length}%"></i></div>`+SWL.map((l,i)=>`<div class="sw-row"><span>${l.k}</span><span>${d[i]?'✅':'⬜'}</span></div>`).join('')}).join('')}
+ <div style="margin-top:12px"><button class="sw-go" style="font-size:18px;min-height:56px;padding:8px 20px" onclick="st_unlock()">Unlock all levels (current student)</button>
+ <button class="sw-go" style="font-size:18px;min-height:56px;padding:8px 20px;background:#be123c" onclick="st_reset()">Reset Season Weather (current student)</button>
+ <button class="sw-go" style="font-size:18px;min-height:56px;padding:8px 20px;background:#475569" onclick="goToHome()">Back</button></div>
+ <p style="font-size:13px;color:#64748b;margin-top:14px">Ontario Grade 1 Science – E2.4<br>“Describe and compare the four seasons in terms of weather, including precipitation and temperature.”</p></div></div>`};
+window.st_unlock=()=>{st().all=true;saveStateToStorage();swTeacher()};
+window.st_reset=()=>{if(confirm('Reset Season Weather progress for this student?')){appState.students[appState.currentStudent].sw={done:{},v:2};saveStateToStorage();swTeacher()}};
+const _rh=renderHomeScreen;
+renderHomeScreen=function(){_rh();const c=document.querySelector('#app-viewport>div');if(!c)return;
+ c.insertAdjacentHTML('beforeend',`<button class="sw-btn" style="width:100%;max-width:896px;margin:24px auto 0;flex-direction:row;gap:20px;border-color:#0369a1;background:#e0f2fe" onclick="speakText('Season Weather');swMenu()" aria-label="Season Weather"><span class="sw-big" style="font-size:72px">🌦️</span><span class="sw-lbl">SEASON WEATHER</span><span class="sw-lbl">${pct()}%</span></button>`)};
+window.__SWL=SWL;
+})();
+</script>
+<script>
+/* ===== Drag & drop (mouse, touch, pen) for both sorting levels. Tapping still works. ===== */
+(function(){
+let d=null,last=0;
+const zones=()=>document.querySelectorAll('#season-bin,[data-drop]');
+document.addEventListener('pointerdown',e=>{const el=e.target.closest&&e.target.closest('[data-drag],[id^="sorting-item-"]');
+ if(!el||(e.pointerType==='mouse'&&e.button))return;d={el,x:e.clientX,y:e.clientY,on:0}});
+document.addEventListener('pointermove',e=>{if(!d)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;
+ if(!d.on){if(Math.hypot(dx,dy)<10)return;d.on=1;Object.assign(d.el.style,{zIndex:60,pointerEvents:'none',opacity:'.9',position:'relative'})}
+ d.el.style.transform='translate('+dx+'px,'+dy+'px) scale(1.08)';
+ const t=document.elementFromPoint(e.clientX,e.clientY),z=t&&t.closest('#season-bin,[data-drop]');
+ zones().forEach(b=>b.style.outline=b===z?'8px solid #1d4ed8':'');e.preventDefault()},{passive:false});
+function end(e,cancel){if(!d)return;const o=d;d=null;if(!o.on)return;
+ const t=document.elementFromPoint(e.clientX,e.clientY),z=t&&t.closest('#season-bin,[data-drop]'),el=o.el;
+ Object.assign(el.style,{zIndex:'',pointerEvents:'',opacity:'',transform:''});zones().forEach(b=>b.style.outline='');last=Date.now();
+ if(!z||cancel)return; // dropped elsewhere: item just slides back, nothing else happens
+ if(el.dataset.drag)swTap(el.dataset.drag);
+ else{appState.selectedSortingItem=+el.id.split('-')[2];handleBinTap()}}
+document.addEventListener('pointerup',e=>end(e));
+document.addEventListener('pointercancel',e=>end(e,1));
+document.addEventListener('click',e=>{if(Date.now()-last<400){e.stopPropagation();e.preventDefault()}},true);
+})();
+</script>
 </body>
 </html>
